@@ -123,7 +123,7 @@
         function val() {
             let form = document.getElementById('charge-form')
             let amountElement = document.getElementById('amount')
-  
+            
             if (form.checkValidity() === false) {
                 this.event.preventDefault()
                 this.event.stopPropagation()
@@ -134,7 +134,12 @@
             }
             this.event.preventDefault()
             isSuccess()
+            submitting()
             return
+        }
+
+        function submitting() {
+            payButton.classList.add('is-loading')
         }
         
 
