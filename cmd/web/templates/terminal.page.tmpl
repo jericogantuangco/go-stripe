@@ -46,11 +46,9 @@
                 id="cardholder-name" name="cardholder_name" required="" 
                 autocomplete="cardholder-name-new">
             <span class="icon is-small is-right">
-                <i class="fas fa-check is-hidden"></i>
+                <i id="cardholder-name-icon" class="fas is-hidden"></i>
             </span>
-            <span class="icon is-small is-right">
-                <i class="fas fa-exclamation-triangle is-hidden"></i>
-            </span>
+            <p id="cardholder-name-message" class="help is-invisible"></p>
         </div>
     </div>
 
@@ -61,11 +59,9 @@
                 id="cardholder-email" name="cardholder_email" required="" 
                 autocomplete="cardholder-email-new">
             <span class="icon is-small is-right">
-                <i class="fas fa-check is-hidden"></i>
+                <i id="cardholder-email-icon" class="fas is-hidden"></i>
             </span>
-            <span class="icon is-small is-right">
-                <i class="fas fa-exclamation-triangle is-hidden"></i>
-            </span>
+            <p id="cardholder-email-message" class="help is-invisible"></p>
         </div>
     </div>
 
@@ -75,7 +71,7 @@
         <div class="control">
             <div class="input my-control" id="card-element"></div>
         </div>
-        <p id="card-errors" class="help is-danger is-invisible" role="alert"></p>
+        <p id="card-errors" class="help is-invisible" role="alert"></p>
     </div>
 
     <hr>
@@ -101,29 +97,46 @@
         const cardMessages = document.getElementById('card-messages');
         const payButton = document.getElementById('pay-button');
         const processing = document.getElementById('processing-payment');
+        const element = {
+            amount: { 
+                input: document.getElementById('amount'),
+                icon: document.getElementById('amount-icon'),
+                message: document.getElementById('amount-message'),
+                messageContent: "Enter the amount.",
+            },
+            cardHolderName: {
+                input: document.getElementById('cardholder-name'),
+                icon: document.getElementById('cardholder-name-icon'),
+                message: document.getElementById('cardholder-name-message'),
+                messageContent: "Enter cardholder name",
+            },  
+            cardHolderEmail: {
+                input: document.getElementById('cardholder-email'),
+                icon: document.getElementById('cardholder-email-icon'),
+                message: document.getElementById('cardholder-email-message'),
+                messageContent: "Enter cardholder email address.",
+            }
+        }
 
         stripe = Stripe('pk_test_51Kl2VvDquGWD6r4e1tc4qI2sfS4WhZR8OyGyzgbyEKAcxiu1TJWVu8XhBD7aPgF3C8uO2eUF8dSTFYfJprTAcgCF009SVnSsXu')
         
         function val() {
             let form = document.getElementById('charge-form')
             let amountElement = document.getElementById('amount')
-            let element = {
-                input: document.getElementById('amount'),
-                icon: document.getElementById('amount-icon'),
-                message: document.getElementById('amount-message'),
-            }
-
-            
+  
             if (form.checkValidity() === false) {
                 this.event.preventDefault()
                 this.event.stopPropagation()
-                validateEmpty(element)
+                validateEmpty(element.amount)
+                validateEmpty(element.cardHolderName)
+                validateEmpty(element.cardHolderEmail)
                 return
             }
             this.event.preventDefault()
             isSuccess()
             return
         }
+        
 
         function validateEmpty(element) {
             if (element.input && !element.input.value) {
@@ -141,17 +154,22 @@
                 element.icon.classList.add('fa-check')
                 element.message.classList.remove('is-danger', 'is-invisible')
                 element.message.classList.add('is-success')
-                element.message.textContent = 'Enter the amount.'
+                element.message.textContent = element.messageContent
 
             }
         }
 
-        function unValidated() {
-            elements = document.getElementsByClassName('fa-exclamation-triangle')
-            for(let item of elements) {
-                item.classList.remove('is-hidden')
-            }
-        }
+        element.amount.input.addEventListener('change', function(event) {
+            validateEmpty(element.amount)
+        })
+
+        element.cardHolderName.input.addEventListener('change', function(event){
+            validateEmpty(element.cardHolderName)
+        })
+
+        element.cardHolderEmail.input.addEventListener('change', function(event){
+            validateEmpty(element.cardHolderEmail)
+        })
 
         function isSuccess() {
             elements = document.getElementsByClassName('fa-check')
@@ -194,16 +212,20 @@
 
             //check for input errors
             card.addEventListener('change', function(event) {
-                let displayError = document.getElementById('card-errors');
-                let cardElement = document.getElementById('card-element');
+                let message = document.getElementById('card-errors')
+                let cardElement = document.getElementById('card-element')
                 if (event.error) {
-                    displayError.classList.remove('is-invisible');
-                    displayError.textContent = event.error.message;
-                    cardElement.classList.add('is-danger');
+                    cardElement.classList.add('is-danger')
+                    cardElement.classList.remove('is-success')
+                    message.classList.remove('is-invisible', 'is-success')
+                    message.classList.add('is-danger')
+                    message.textContent = event.error.message
                 } else {
-                    displayError.classList.add('is-invisible');
-                    displayError.textContent = '';
-                    cardElement.classList.remove('is-danger');
+                    cardElement.classList.remove('is-danger')
+                    cardElement.classList.add('is-success')
+                    message.classList.add('is-success')
+                    message.classList.remove('is-invisible', 'is-danger')
+                    message.textContent = 'Valid credit card info'
                 }
             });
 
