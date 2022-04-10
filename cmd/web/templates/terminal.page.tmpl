@@ -83,7 +83,7 @@
     </div>
 
     <div id="processing-payment" class="is-invisible has-text-centered"></div>
-
+     
 </form>
 {{ end }}
 
@@ -118,6 +118,19 @@
             }
         }
 
+        element.amount.input.addEventListener('change', function(event) {
+            validateEmpty(element.amount)
+        })
+
+        element.cardHolderName.input.addEventListener('change', function(event){
+            validateEmpty(element.cardHolderName)
+        })
+
+        element.cardHolderEmail.input.addEventListener('change', function(event){
+            validateEmpty(element.cardHolderEmail)
+        })
+
+        
         stripe = Stripe('pk_test_51Kl2VvDquGWD6r4e1tc4qI2sfS4WhZR8OyGyzgbyEKAcxiu1TJWVu8XhBD7aPgF3C8uO2eUF8dSTFYfJprTAcgCF009SVnSsXu')
         
         function val() {
@@ -133,14 +146,60 @@
                 return
             }
             this.event.preventDefault()
-            isSuccess()
+            
             submitting()
+
+            let amountToCharge = String(parseFloat(document.getElementById("amount").value) * 100)
+            
+            let payload = {
+                amount: amountToCharge,
+                currency: 'ph',
+            }
+
+            const requestOptions = {
+                method: 'post',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            }
+
+            fetch("http://localhost:4001/api/payment-intent", requestOptions)
+                .then(response => response.text())
+                .then(response => {
+                    let data
+                    try {
+                        data = JSON.parse(response)
+                        stripe.confirmCardPayment(data.client_secret, {
+                            card: card,
+                            billing_details: {
+                                name: document.getElementbyId("cardholder-name").value,
+                            }
+                        }).then(function(result) {
+                            if (result.error) {
+                                showError(result.error.message)
+                                submittable()
+                            } else if (result.paymentIntent) {
+                                if (result.paymentIntent.status === 'succeeded') {
+                                    
+                                }
+                            }
+                        })
+                    } catch (err) {
+                        console.log(err)
+                    }
+                })
+
             return
         }
-
+        
+      
+        
         function submitting() {
             payButton.classList.add('is-loading')
         }
+        
         
 
         function validateEmpty(element) {
@@ -164,25 +223,7 @@
             }
         }
 
-        element.amount.input.addEventListener('change', function(event) {
-            validateEmpty(element.amount)
-        })
-
-        element.cardHolderName.input.addEventListener('change', function(event){
-            validateEmpty(element.cardHolderName)
-        })
-
-        element.cardHolderEmail.input.addEventListener('change', function(event){
-            validateEmpty(element.cardHolderEmail)
-        })
-
-        function isSuccess() {
-            elements = document.getElementsByClassName('fa-check')
-            for(let item of elements) {
-                item.classList.remove('is-hidden')
-            }
-        }
-
+       
         (function(){
             // create stripe and elements
             const elements = stripe.elements()
