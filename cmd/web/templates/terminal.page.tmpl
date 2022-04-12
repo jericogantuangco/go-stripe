@@ -21,7 +21,7 @@
 <h2 class="has-text-centered mt-3">Virtual Terminal</h2>
 <hr>
 <div class="notification is-light is-invisible has-text-centered" id="card-messages"></div>
-<form action="" method="post"
+<form action="/payment-succeeded" method="post"
     name="charge_form" id="charge-form"
     class="block field" autocomplete="off"
     novalidate=""
@@ -173,6 +173,7 @@
                 .then(response => response.text())
                 .then(response => {
                     let data
+                    let delayInMilliseconds = 1500; //1 second
                     try {
                         data = JSON.parse(response)
                         stripe.confirmCardPayment(data.client_secret, {
@@ -194,6 +195,10 @@
                                     document.getElementById('payment-currency').value = result.paymentIntent.currency
                                     showCardSuccess()
                                     disabled()
+                                    setTimeout(function() {
+                                        document.getElementById('charge-form').submit()
+                                    }, delayInMilliseconds);
+                                    
                                 }
                             }
                         })
