@@ -20,7 +20,7 @@
 {{ define "content" }}
 <h2 class="has-text-centered mt-3">Virtual Terminal</h2>
 <hr>
-<div class="notification is-danger-is-light is-invisible" id="card-messages"></div>
+<div class="notification is-light is-invisible has-text-centered" id="card-messages"></div>
 <form action="" method="post"
     name="charge_form" id="charge-form"
     class="block field" autocomplete="off"
@@ -83,6 +83,10 @@
     </div>
 
     <div id="processing-payment" class="is-invisible has-text-centered"></div>
+    <input type="hidden" name="payment_intent" id="payment-intent">
+    <input type="hidden" name="payment_method" id="payment-method">
+    <input type="hidden" name="payment_amount" id="payment-amount">
+    <input type="hidden" name="payment_currency" id="payment-currency">
      
 </form>
 {{ end }}
@@ -153,7 +157,7 @@
             
             let payload = {
                 amount: amountToCharge,
-                currency: 'ph',
+                currency: 'php',
             }
 
             const requestOptions = {
@@ -172,32 +176,63 @@
                     try {
                         data = JSON.parse(response)
                         stripe.confirmCardPayment(data.client_secret, {
-                            card: card,
-                            billing_details: {
-                                name: document.getElementbyId("cardholder-name").value,
+                            payment_method: {
+                                card: card,
+                                billing_details: {
+                                    name: document.getElementById("cardholder-name").value,                                              
+                                }
                             }
                         }).then(function(result) {
                             if (result.error) {
-                                showError(result.error.message)
+                                showCardError(result.error.message)
                                 submittable()
                             } else if (result.paymentIntent) {
                                 if (result.paymentIntent.status === 'succeeded') {
-                                    
+                                    document.getElementById('payment-method').value = result.paymentIntent.payment_method_types[0]
+                                    document.getElementById('payment-intent').value = result.paymentIntent.id
+                                    document.getElementById('payment-amount').value = result.paymentIntent.amount
+                                    document.getElementById('payment-currency').value = result.paymentIntent.currency
+                                    showCardSuccess()
+                                    disabled()
                                 }
                             }
                         })
                     } catch (err) {
                         console.log(err)
+                        showCardError(err)
+                        submittable()
                     }
                 })
 
             return
         }
         
-      
+
+        function submittable() {
+            payButton.classList.remove('is-loading')
+        }
         
         function submitting() {
             payButton.classList.add('is-loading')
+        }
+
+        function disabled() {
+            payButton.disabled = true
+            payButton.classList.remove('is-loading')
+        }
+
+        function showCardError(msg) {
+            cardMessages.classList.add('is-danger')
+            cardMessages.classList.remove('is-success')
+            cardMessages.classList.remove('is-invisible')
+            cardMessages.textContent = msg
+        }
+        
+        function showCardSuccess(msg) {
+            cardMessages.classList.remove('is-danger')
+            cardMessages.classList.add('is-success')
+            cardMessages.classList.remove('is-invisible')
+            cardMessages.textContent = 'Transaction Succeeded.'
         }
         
         
