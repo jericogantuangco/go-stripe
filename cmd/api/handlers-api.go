@@ -34,15 +34,16 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	card := cards.Card {
-		Secret: app.config.stripe.secret,
-		Key: app.config.stripe.key,
+	card := cards.Card{
+		Secret:   app.config.stripe.secret,
+		Key:      app.config.stripe.key,
 		Currency: payload.Currency,
 	}
 
 	okay := true
 
 	pi, msg, err := card.Charge(payload.Currency, amount)
+
 	if err != nil {
 		okay = false
 	}
@@ -57,19 +58,18 @@ func (app *application) GetPaymentIntent(w http.ResponseWriter, r *http.Request)
 		w.Write(out)
 	} else {
 		j := jsonResponse{
-			OK: false,
+			OK:      false,
 			Message: msg,
 			Content: "",
 		}
-	
+
 		out, err := json.MarshalIndent(j, "", "    ")
 		if err != nil {
 			app.errorLog.Println(err)
 		}
-	
+
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(out)
 	}
 
-	 
 }
