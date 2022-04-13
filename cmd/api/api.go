@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/jericogantuangco/go-stripe/driver"
 	"github.com/joho/godotenv"
 )
 
@@ -57,8 +58,16 @@ func main() {
 
 	flag.IntVar(&cfg.port, "port", 4001, "Server port to listen on")
 	flag.StringVar(&cfg.env, "env", "development", "Application environment {development|production|maintenace}")
+	flag.StringVar(&cfg.db.dsn, "dsn", "Jerico:secret@tcp(localhost:3306)/widgets?parseTime=true&tls=false", "DSN")
 
 	flag.Parse()
+
+	conn, err := driver.OpenDB(cfg.db.dsn)
+	if err != nil {
+		errorLog.Fatal(err)
+	}
+
+	defer conn.Close()
 
 	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal(err)
