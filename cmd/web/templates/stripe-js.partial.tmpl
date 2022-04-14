@@ -1,0 +1,227 @@
+{{ define "stripe-js" }}
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://kit.fontawesome.com/881c30fcf9.js" crossorigin="anonymous"></script>
+<script>
+    let card;
+    let stripe;
+    const cardMessages = document.getElementById('card-messages');
+    const payButton = document.getElementById('pay-button');
+    const processing = document.getElementById('processing-payment');
+    const element = {
+        amount: { 
+            input: document.getElementById('amount'),
+            icon: document.getElementById('amount-icon'),
+            message: document.getElementById('amount-message'),
+            messageContent: "Enter the amount.",
+        },
+        cardHolderName: {
+            input: document.getElementById('cardholder-name'),
+            icon: document.getElementById('cardholder-name-icon'),
+            message: document.getElementById('cardholder-name-message'),
+            messageContent: "Enter cardholder name",
+        },  
+        cardHolderEmail: {
+            input: document.getElementById('cardholder-email'),
+            icon: document.getElementById('cardholder-email-icon'),
+            message: document.getElementById('cardholder-email-message'),
+            messageContent: "Enter cardholder email address.",
+        }
+    }
+
+    element.amount.input.addEventListener('change', function(event) {
+        validateEmpty(element.amount)
+    })
+
+    element.cardHolderName.input.addEventListener('change', function(event){
+        validateEmpty(element.cardHolderName)
+    })
+
+    element.cardHolderEmail.input.addEventListener('change', function(event){
+        validateEmpty(element.cardHolderEmail)
+    })
+
+    
+    stripe = Stripe('pk_test_51Kl2VvDquGWD6r4e1tc4qI2sfS4WhZR8OyGyzgbyEKAcxiu1TJWVu8XhBD7aPgF3C8uO2eUF8dSTFYfJprTAcgCF009SVnSsXu')
+    
+    function val() {
+        let form = document.getElementById('charge-form')
+        let amountElement = document.getElementById('amount')
+        
+        if (form.checkValidity() === false) {
+            this.event.preventDefault()
+            this.event.stopPropagation()
+            validateEmpty(element.amount)
+            validateEmpty(element.cardHolderName)
+            validateEmpty(element.cardHolderEmail)
+            return
+        }
+        this.event.preventDefault()
+        
+        submitting()
+
+        let amountToCharge = String(parseFloat(document.getElementById("amount").value) * 100)
+        
+        let payload = {
+            amount: amountToCharge,
+            currency: 'php',
+        }
+
+        const requestOptions = {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        }
+
+        fetch("http://localhost:4001/api/payment-intent", requestOptions)
+            .then(response => response.text())
+            .then(response => {
+                let data
+                let delayInMilliseconds = 1500; //1 second
+                try {
+                    data = JSON.parse(response)
+                    stripe.confirmCardPayment(data.client_secret, {
+                        payment_method: {
+                            card: card,
+                            billing_details: {
+                                name: document.getElementById("cardholder-name").value,                                              
+                            }
+                        }
+                    }).then(function(result) {
+                        if (result.error) {
+                            showCardError(result.error.message)
+                            submittable()
+                        } else if (result.paymentIntent) {
+                            if (result.paymentIntent.status === 'succeeded') {
+                                document.getElementById('payment-method').value = result.paymentIntent.payment_method_types[0]
+                                document.getElementById('payment-intent').value = result.paymentIntent.id
+                                document.getElementById('payment-amount').value = result.paymentIntent.amount
+                                document.getElementById('payment-currency').value = result.paymentIntent.currency
+                                showCardSuccess()
+                                disabled()
+                                setTimeout(function() {
+                                    document.getElementById('charge-form').submit()
+                                }, delayInMilliseconds);
+                                
+                            }
+                        }
+                    })
+                } catch (err) {
+                    console.log(err)
+                    showCardError(err)
+                    submittable()
+                }
+            })
+
+        return
+    }
+    
+
+    function submittable() {
+        payButton.classList.remove('is-loading')
+    }
+    
+    function submitting() {
+        payButton.classList.add('is-loading')
+    }
+
+    function disabled() {
+        payButton.disabled = true
+        payButton.classList.remove('is-loading')
+    }
+
+    function showCardError(msg) {
+        cardMessages.classList.add('is-danger')
+        cardMessages.classList.remove('is-success')
+        cardMessages.classList.remove('is-invisible')
+        cardMessages.textContent = msg
+    }
+    
+    function showCardSuccess(msg) {
+        cardMessages.classList.remove('is-danger')
+        cardMessages.classList.add('is-success')
+        cardMessages.classList.remove('is-invisible')
+        cardMessages.textContent = 'Transaction Succeeded.'
+    }
+    
+    
+
+    function validateEmpty(element) {
+        if (element.input && !element.input.value) {
+            element.input.classList.add('is-danger')
+            element.input.classList.remove('is-success')
+            element.icon.classList.add('fa-exclamation-triangle')
+            element.icon.classList.remove('is-hidden', 'fa-check')
+            element.message.classList.add('is-danger')
+            element.message.textContent = 'The field cannot be empty.'
+            element.message.classList.remove('is-invisible')
+        }else {
+            element.input.classList.remove('is-danger')
+            element.input.classList.add('is-success')
+            element.icon.classList.remove('is-hidden', 'fa-exclamation-triangle')
+            element.icon.classList.add('fa-check')
+            element.message.classList.remove('is-danger', 'is-invisible')
+            element.message.classList.add('is-success')
+            element.message.textContent = element.messageContent
+
+        }
+    }
+
+    
+    (function(){
+        // create stripe and elements
+        const elements = stripe.elements()
+        const style = {
+            base: {
+                fontSize: '16px',
+                lineHeight: '24px',
+            }
+        };
+        
+        // create card entry
+        card = elements.create('card', {
+            style: style,
+            hidePostalCode: true,
+        });
+
+        
+        card.mount('#card-element');
+        
+        // TODO: element focus for some reason will not invoke
+        // The lines 110-115 below serves as a workaround to add :focus css
+        // however, due to :hover specificity, when hovering over, the css gets
+        // overriden. 
+        // 1. Find a way to invoke focus or make sure that css of :hover and :focus will work
+        card.addEventListener('focus', function(event){
+            document.getElementById('card-element').classList.add('my-focus');
+        });
+        card.addEventListener('blur', function(event){
+            document.getElementById('card-element').classList.remove('my-focus');
+        });
+        
+
+        //check for input errors
+        card.addEventListener('change', function(event) {
+            let message = document.getElementById('card-errors')
+            let cardElement = document.getElementById('card-element')
+            if (event.error) {
+                cardElement.classList.add('is-danger')
+                cardElement.classList.remove('is-success')
+                message.classList.remove('is-invisible', 'is-success')
+                message.classList.add('is-danger')
+                message.textContent = event.error.message
+            } else {
+                cardElement.classList.remove('is-danger')
+                cardElement.classList.add('is-success')
+                message.classList.add('is-success')
+                message.classList.remove('is-invisible', 'is-danger')
+                message.textContent = 'Valid credit card info'
+            }
+        });
+
+        
+    })()
+</script>
+{{ end }}
